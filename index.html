@@ -7,45 +7,51 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    
+
+  <!-- Toolbar -->
   <div class="toolbar">
     <button onclick="saveAsImage()">📸 Save as Image</button>
     <button onclick="addTextBox()">➕ Add Text</button>
     <button onclick="clearCanvas()">🧹 Clear Drawing</button>
     <button onclick="undo()">↩️ Undo</button>
-    <select id="pageSelector" onchange="switchPage(this.value)"></select>
-<button onclick="addPage()">➕ Add Page</button>
-<button onclick="renamePage()">✏️ Rename</button>
-<button onclick="deletePage()">🗑️ Delete</button>
-
-<button onclick="redo()">↪️ Redo</button>
-    <select id="pageSelect" onchange="loadPage()">
+    <button onclick="redo()">↪️ Redo</button>
+    
+    <select id="pageSelector" onchange="switchPage(this.value)">
       <option value="page1.jpg">Page 1</option>
       <option value="page2.jpg">Page 2</option>
     </select>
+    
+    <button onclick="addPage()">➕ Add Page</button>
+    <button onclick="renamePage()">✏️ Rename</button>
+    <button onclick="deletePage()">🗑️ Delete</button>
+
+    <button onclick="undoText()">📝 Undo Text</button>
+    <button onclick="redoText()">📝 Redo Text</button>
+    <button onclick="clearAll()">🧹 Clear All</button>
+
+    <label for="penColor">Pen Color:</label>
+    <input type="color" id="penColor" value="#000000" />
+
+    <label for="penSize">Pen Size:</label>
+    <select id="penSize">
+      <option value="2">Thin</option>
+      <option value="5" selected>Medium</option>
+      <option value="10">Thick</option>
+    </select>
+
+    <button onclick="toggleEraser()" id="eraserButton">🧽 Eraser: Off</button>
+
+    <button onclick="savePage()">💾 Save Page</button>
+    <button onclick="loadPageFromFile()">📂 Load Page</button>
+    <input type="file" id="fileInput" style="display:none" accept=".json" />
   </div>
 
+  <!-- Planner Page + Drawing Canvas + Text -->
   <div id="planner-container">
-    <img id="planner-bg" src="pages/page1.jpg" />
+    <img id="planner-bg" src="pages/page1.jpg" alt="Planner Page" />
     <canvas id="draw-canvas"></canvas>
     <div id="text-layer"></div>
   </div>
-  <button onclick="savePage()">💾 Save Page</button>
-<button onclick="loadPageFromFile()">📂 Load Page</button>
-<input type="file" id="fileInput" style="display:none" accept=".json" />
-<label for="penColor">Pen Color:</label>
-<input type="color" id="penColor" value="#000000" />
-
-<label for="penSize">Pen Size:</label>
-<select id="penSize">
-  <option value="2">Thin</option>
-  <option value="5" selected>Medium</option>
-  <option value="10">Thick</option>
-</select>
-<button onclick="toggleEraser()" id="eraserButton">🧽 Eraser: Off</button>
-<button onclick="undoText()">📝 Undo Text</button>
-<button onclick="redoText()">📝 Redo Text</button>
-<button onclick="clearAll()">🧹 Clear All</button>
 
   <script src="script.js"></script>
 </body>

@@ -1,11 +1,18 @@
+/* General styles */
 body {
   margin: 0;
   font-family: sans-serif;
+  background: #f9f9f9;
 }
 
+/* Toolbar at the top */
 .toolbar {
   background: #eee;
   padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
 }
 
 .toolbar label {
@@ -18,19 +25,25 @@ body {
   padding: 2px;
 }
 
+/* Planner container holds everything */
 #planner-container {
   position: relative;
   width: 100%;
   max-width: 800px;
-  margin: auto;
+  margin: 20px auto;
   border: 1px solid #ccc;
+  touch-action: none; /* Important: allows drawing with touch */
 }
 
+/* Background image (a page) */
 #planner-bg {
   width: 100%;
   display: block;
+  user-select: none;
+  pointer-events: none; /* Let canvas receive events instead */
 }
 
+/* Drawing canvas (goes over the background) */
 #draw-canvas {
   position: absolute;
   top: 0;
@@ -38,27 +51,36 @@ body {
   z-index: 10;
   width: 100%;
   height: 100%;
+  touch-action: none; /* allow stylus/touch drawing */
 }
 
+/* Text layer (goes above canvas) */
 #text-layer {
   position: absolute;
   top: 0;
   left: 0;
   z-index: 20;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* disable default interaction */
 }
 
+/* Individual text boxes */
 .text-box {
   position: absolute;
   background: rgba(255, 255, 255, 0.7);
   border: 1px dashed #666;
-  padding: 4px;
+  padding: 4px 24px 4px 4px; /* room for close button */
   min-width: 50px;
   min-height: 20px;
   resize: both;
   overflow: auto;
-  padding-right: 20px; /* room for close button */
+  pointer-events: auto; /* enable interaction */
+  touch-action: none; /* enable dragging */
+  cursor: move;
 }
 
+/* Close ("X") button on text box */
 .text-box .close-btn {
   position: absolute;
   top: -8px;
@@ -77,6 +99,19 @@ body {
   display: none;
 }
 
+/* Show close button on hover */
 .text-box:hover .close-btn {
   display: block;
+}
+
+/* Responsive handling */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .text-box {
+    font-size: 14px;
+  }
 }
