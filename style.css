@@ -99,6 +99,10 @@ body {
   display: none;
 }
 
+canvas {
+  touch-action: none;
+}
+
 /* Show close button on hover */
 .text-box:hover .close-btn {
   display: block;

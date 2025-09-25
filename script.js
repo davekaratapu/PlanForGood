@@ -172,6 +172,36 @@ function resizeCanvas() {
   canvas.style.width = rect.width + 'px';
   canvas.style.height = rect.height + 'px';
 
+  canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  drawing = true;
+  const rect = canvas.getBoundingClientRect();
+  ctx.beginPath();
+  ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (!drawing) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  ctx.strokeStyle = isEraser ? '#FFFFFF' : penColor;
+  ctx.lineWidth = penSize;
+  ctx.lineCap = 'round';
+  ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+  ctx.stroke();
+});
+
+canvas.addEventListener('pointerup', () => {
+  drawing = false;
+  saveState();
+});
+
+canvas.addEventListener('pointerleave', () => {
+  drawing = false;
+});
+
+
+
   ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
   ctx.scale(dpr, dpr);
 
