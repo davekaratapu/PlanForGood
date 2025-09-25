@@ -18,21 +18,17 @@ let textRedoStack = [];
 let pages = []; // Array of page objects
 let currentPageIndex = -1; // -1 means no page yet
 
-{
-  name: "Page 1",
-  background: "image-url.jpg",
-  drawing: "data:image/png;base64,...",
-  textBoxesHTML: "<div class='text-box'>...</div>"
-}
+// Drawing flag
+let drawing = false;
+
+// ======= PAGE MANAGEMENT =======
 
 function addPage() {
   const name = prompt("Enter page name:", "Page " + (pages.length + 1));
   if (!name) return;
 
-  // Save current page before switching
   if (currentPageIndex !== -1) saveCurrentPage();
 
-  // Create new blank page
   const newPage = {
     name,
     background: image.src,
@@ -68,29 +64,6 @@ function renamePage() {
   }
 }
 
-function autoSaveProject() {
-  saveCurrentPage(); // Save current state before storing
-  const saveData = {
-    pages,
-    currentPageIndex
-  };
-  localStorage.setItem('plannerProject', JSON.stringify(saveData));
-}
-
-window.addEventListener('load', () => {
-  const saved = localStorage.getItem('plannerProject');
-  if (!saved) return;
-
-  const project = JSON.parse(saved);
-  pages = project.pages || [];
-  currentPageIndex = project.currentPageIndex || 0;
-
-  updatePageSelector();
-  if (pages.length > 0) loadPage(currentPageIndex);
-});
-
-
-
 function deletePage() {
   if (currentPageIndex === -1) return;
   if (!confirm("Are you sure you want to delete this page?")) return;
@@ -108,7 +81,6 @@ function deletePage() {
   autoSaveProject();
 }
 
-
 function saveCurrentPage() {
   if (currentPageIndex === -1) return;
   pages[currentPageIndex].drawing = canvas.toDataURL();
@@ -119,60 +91,72 @@ function loadPage(index) {
   currentPageIndex = parseInt(index);
   const page = pages[currentPageIndex];
 
-  // Set background
+  if (!page) return;
+
   image.src = page.background;
 
-  // Load drawing
   const img = new Image();
   img.onload = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
+    if (page.drawing) {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
   };
   img.src = page.drawing || "";
 
-  // Load text boxes
   textLayer.innerHTML = page.textBoxesHTML || "";
   rebindTextBoxes();
 
-  autoSaveProject(); // Save project on switch
+  autoSaveProject();
 }
 
-
-function saveTextState() {
-  const snapshot = textLayer.innerHTML;
-  textHistory.push(snapshot);
-  if (textHistory.length > 50) textHistory.shift(); // limit size
-  textRedoStack = []; // clear redo stack
-  autoSave();
+function autoSaveProject() {
+  saveCurrentPage();
+  const saveData = {
+    pages,
+    currentPageIndex
+  };
+  localStorage.setItem('plannerProject', JSON.stringify(saveData));
 }
 
+// Load saved project on window load
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('plannerProject');
+  if (!saved) return;
 
-function toggleEraser() {
-  isEraser = !isEraser;
+  const project = JSON.parse(saved);
+  pages = project.pages || [];
+  currentPageIndex = project.currentPageIndex || 0;
 
-  const btn = document.getElementById('eraserButton');
-  if (isEraser) {
-    btn.textContent = '🧽 Eraser: On';
-  } else {
-    btn.textContent = '🧽 Eraser: Off';
-  }
-}
+  updatePageSelector();
+  if (pages.length > 0) loadPage(currentPageIndex);
+});
 
+// ======= CANVAS RESIZE =======
 
-// Resize canvas to match image
 function resizeCanvas() {
   const rect = image.getBoundingClientRect();
 
-  // Get device pixel ratio for crisp drawing on retina
   const dpr = window.devicePixelRatio || 1;
 
-  // Set canvas size based on real pixels
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
   canvas.style.width = rect.width + 'px';
   canvas.style.height = rect.height + 'px';
 
-  canvas.addEventListener('pointerdown', e => {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+
+  textLayer.style.width = rect.width + 'px';
+  textLayer.style.height = rect.height + 'px';
+}
+
+window.addEventListener('resize', resizeCanvas);
+image.onload = resizeCanvas;
+
+// ======= DRAWING HANDLERS =======
+
+canvas.addEventListener('pointerdown', e => {
   e.preventDefault();
   drawing = true;
   const rect = canvas.getBoundingClientRect();
@@ -191,37 +175,18 @@ canvas.addEventListener('pointermove', e => {
   ctx.stroke();
 });
 
-canvas.addEventListener('pointerup', () => {
-  drawing = false;
-  saveState();
+canvas.addEventListener('pointerup', e => {
+  if (drawing) {
+    drawing = false;
+    saveState();
+  }
 });
 
 canvas.addEventListener('pointerleave', () => {
   drawing = false;
 });
 
-
-
-  ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-  ctx.scale(dpr, dpr);
-
-  textLayer.style.width = rect.width + 'px';
-  textLayer.style.height = rect.height + 'px';
-}
-
-
-window.addEventListener('resize', resizeCanvas);
-image.onload = resizeCanvas;
-
-// Drawing functionality
-let drawing = false;
-
-canvas.addEventListener('mousedown', e => {
-  drawing = true;
-  ctx.beginPath();
-  ctx.moveTo(e.offsetX, e.offsetY);
-});
-
+// Support for mouse events (for compatibility)
 canvas.addEventListener('mousedown', e => {
   drawing = true;
   ctx.beginPath();
@@ -229,35 +194,57 @@ canvas.addEventListener('mousedown', e => {
 });
 
 canvas.addEventListener('mousemove', e => {
+  if (!drawing) return;
+  ctx.strokeStyle = isEraser ? '#FFFFFF' : penColor;
+  ctx.lineWidth = penSize;
+  ctx.lineCap = 'round';
+  ctx.lineTo(e.offsetX, e.offsetY);
+  ctx.stroke();
+});
+
+canvas.addEventListener('mouseup', e => {
   if (drawing) {
-    ctx.strokeStyle = isEraser ? '#FFFFFF' : penColor;
-    ctx.lineWidth = penSize;
-    ctx.lineCap = 'round';
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
+    drawing = false;
+    saveState();
   }
 });
 
+// Touch drawing support
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (e.touches.length > 0) {
+    drawing = true;
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    ctx.beginPath();
+    ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+  }
+}, { passive: false });
 
-document.getElementById('penColor').addEventListener('input', (e) => {
-  penColor = e.target.value;
-});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!drawing) return;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  ctx.strokeStyle = isEraser ? '#FFFFFF' : penColor;
+  ctx.lineWidth = penSize;
+  ctx.lineCap = 'round';
+  ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+  ctx.stroke();
+}, { passive: false });
 
-document.getElementById('penSize').addEventListener('change', (e) => {
-  penSize = parseInt(e.target.value);
-});
-
-
-canvas.addEventListener('mouseup', () => {
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
   drawing = false;
   saveState();
-});
+}, { passive: false });
+
+// ======= HISTORY MANAGEMENT =======
 
 function saveState() {
-  // Save current canvas state as image
-  if (history.length > 50) history.shift(); // prevent memory overload
+  if (history.length > 50) history.shift();
   history.push(canvas.toDataURL());
-  redoStack = []; // clear redo stack when new action is made
+  redoStack = [];
   autoSave();
 }
 
@@ -279,52 +266,46 @@ function loadCanvasFromDataURL(dataURL) {
   const img = new Image();
   img.onload = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   };
   img.src = dataURL;
 }
 
+// ======= TEXT BOX MANAGEMENT =======
 
-canvas.addEventListener('mouseleave', () => {
-  drawing = false;
-});
-
-// Add text boxes
 function addTextBox() {
   const box = document.createElement('div');
   box.className = 'text-box';
   box.contentEditable = true;
+  box.style.position = 'absolute';
   box.style.left = '50px';
   box.style.top = '50px';
 
-  // Close button
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
   closeBtn.innerHTML = '×';
   closeBtn.onclick = function (e) {
-    e.stopPropagation(); // prevent dragging
+    e.stopPropagation();
     box.remove();
     saveTextState();
   };
 
   box.appendChild(closeBtn);
+
   box.addEventListener('mousedown', dragMouseDown);
   box.addEventListener('input', saveTextState);
+
   textLayer.appendChild(box);
   saveTextState();
 }
 
-box.appendChild(closeBtn);
-  box.addEventListener('mousedown', dragMouseDown);
-  box.addEventListener('input', saveTextState);
-  textLayer.appendChild(box);
-  saveTextState();
+function saveTextState() {
+  const snapshot = textLayer.innerHTML;
+  textHistory.push(snapshot);
+  if (textHistory.length > 50) textHistory.shift();
+  textRedoStack = [];
+  autoSave();
 }
-
-
-box.addEventListener('input', () => {
-  saveTextState(); // <--- Save when edited
-});
 
 function undoText() {
   if (textHistory.length === 0) return;
@@ -348,7 +329,6 @@ function rebindTextBoxes() {
     box.addEventListener('mousedown', dragMouseDown);
     box.addEventListener('input', saveTextState);
 
-    // If close button is missing (after undo/redo), add it
     if (!box.querySelector('.close-btn')) {
       const closeBtn = document.createElement('button');
       closeBtn.className = 'close-btn';
@@ -363,18 +343,27 @@ function rebindTextBoxes() {
   });
 }
 
+// ======= DRAGGING TEXT BOXES =======
 
-
-
-// Drag text boxes
 function dragMouseDown(e) {
-  const box = e.target;
-  let shiftX = e.clientX - box.getBoundingClientRect().left;
-  let shiftY = e.clientY - box.getBoundingClientRect().top;
+  const box = e.currentTarget;
+  e.preventDefault();
+
+  const rect = box.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const shiftX = e.clientX - rect.left;
+  const shiftY = e.clientY - rect.top;
 
   function moveAt(pageX, pageY) {
-    box.style.left = pageX - shiftX - container.offsetLeft + 'px';
-    box.style.top = pageY - shiftY - container.offsetTop + 'px';
+    let newLeft = pageX - shiftX - containerRect.left;
+    let newTop = pageY - shiftY - containerRect.top;
+
+    // Optional: constrain within container boundaries
+    newLeft = Math.max(0, Math.min(newLeft, container.clientWidth - box.offsetWidth));
+    newTop = Math.max(0, Math.min(newTop, container.clientHeight - box.offsetHeight));
+
+    box.style.left = newLeft + 'px';
+    box.style.top = newTop + 'px';
   }
 
   function onMouseMove(e) {
@@ -383,203 +372,99 @@ function dragMouseDown(e) {
 
   document.addEventListener('mousemove', onMouseMove);
 
-  box.onmouseup = function () {
+  document.addEventListener('mouseup', function onMouseUp() {
     document.removeEventListener('mousemove', onMouseMove);
-    box.onmouseup = null;
-    saveTextState(); // <--- Save move
-  };
+    document.removeEventListener('mouseup', onMouseUp);
+    saveTextState();
+  });
 }
 
-// Touch/stylus drawing
-canvas.addEventListener('touchstart', function (e) {
-  e.preventDefault();
-  if (e.touches.length > 0) {
-    drawing = true;
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0];
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  }
-}, { passive: false });
+// ======= PEN SETTINGS =======
 
-canvas.addEventListener('touchmove', function (e) {
-  e.preventDefault();
-  if (drawing && e.touches.length > 0) {
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0];
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-    ctx.strokeStyle = isEraser ? '#FFFFFF' : penColor;
-    ctx.lineWidth = penSize;
-    ctx.lineCap = 'round';
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  }
-}, { passive: false });
+document.getElementById('penColor').addEventListener('input', (e) => {
+  penColor = e.target.value;
+});
 
-canvas.addEventListener('touchend', function (e) {
-  e.preventDefault();
-  drawing = false;
-  saveState();
-}, { passive: false });
+document.getElementById('penSize').addEventListener('change', (e) => {
+  penSize = parseInt(e.target.value);
+});
 
+function toggleEraser() {
+  isEraser = !isEraser;
+  const btn = document.getElementById('eraserButton');
+  btn.textContent = isEraser ? '🧽 Eraser: On' : '🧽 Eraser: Off';
+}
 
-// Clear canvas
+// ======= CLEAR FUNCTIONS =======
+
 function clearCanvas() {
+  if (!confirm('Clear the canvas? This cannot be undone.')) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  saveState();
 }
 
-// Load new page
-function loadPage() {
-  const page = document.getElementById('pageSelect').value;
-  image.src = 'pages/' + page;
-  clearCanvas();
+function clearText() {
+  if (!confirm('Clear all text boxes? This cannot be undone.')) return;
   textLayer.innerHTML = '';
+  saveTextState();
 }
 
-function saveAsImage() {
+// ======= EXPORT =======
+
+function exportToImage() {
+  // Save current state
+  saveCurrentPage();
+
+  // Create temporary canvas to merge canvas + text layer
   const exportCanvas = document.createElement('canvas');
   exportCanvas.width = canvas.width;
   exportCanvas.height = canvas.height;
   const exportCtx = exportCanvas.getContext('2d');
 
-  // Draw the background image
-  exportCtx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  // Draw background image
+  const bgImg = new Image();
+  bgImg.src = image.src;
 
-  // Draw the canvas content (drawing layer)
-  exportCtx.drawImage(canvas, 0, 0);
+  bgImg.onload = () => {
+    exportCtx.drawImage(bgImg, 0, 0, exportCanvas.width, exportCanvas.height);
+    exportCtx.drawImage(canvas, 0, 0);
 
-  // Draw text boxes from the textLayer
-  const textBoxes = textLayer.querySelectorAll('.text-box');
-  textBoxes.forEach(box => {
-    const x = parseFloat(box.style.left);
-    const y = parseFloat(box.style.top);
-    exportCtx.font = '16px sans-serif';
-    exportCtx.fillStyle = '#000';
-    exportCtx.fillText(box.innerText, x, y + 16); // add y offset for baseline
-  });
-
-  // Save final image
-  const dataURL = exportCanvas.toDataURL('image/png');
-  const link = document.createElement('a');
-  link.download = 'planner-page.png';
-  link.href = dataURL;
-  link.click();
-}
-
-function savePage() {
-  const textBoxes = [];
-  textLayer.querySelectorAll('.text-box').forEach(box => {
-    textBoxes.push({
-      text: box.innerText,
-      left: box.style.left,
-      top: box.style.top
+    // Draw text layer (convert divs to image)
+    html2canvas(textLayer, { backgroundColor: null }).then(textCanvas => {
+      exportCtx.drawImage(textCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
+      const link = document.createElement('a');
+      link.download = 'planner_export.png';
+      link.href = exportCanvas.toDataURL();
+      link.click();
     });
-  });
-
-  const drawing = canvas.toDataURL(); // drawing as image
-
-  const pageData = {
-    background: image.src,
-    drawing,
-    textBoxes
   };
-
-  const blob = new Blob([JSON.stringify(pageData, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement('a');
-  link.download = 'planner-page.json';
-  link.href = url;
-  link.click();
 }
 
-document.getElementById('fileInput').addEventListener('change', function () {
-  const file = this.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const pageData = JSON.parse(e.target.result);
-    loadSavedPage(pageData);
-  };
-  reader.readAsText(file);
-});
+// ======= BUTTON BINDINGS =======
 
-function loadPageFromFile() {
-  document.getElementById('fileInput').click();
-}
+document.getElementById('addTextBox').onclick = addTextBox;
+document.getElementById('undoButton').onclick = () => {
+  undo();
+  undoText();
+};
+document.getElementById('redoButton').onclick = () => {
+  redo();
+  redoText();
+};
+document.getElementById('clearCanvas').onclick = clearCanvas;
+document.getElementById('clearText').onclick = clearText;
+document.getElementById('eraserButton').onclick = toggleEraser;
 
-function loadSavedPage(data) {
-  // Set background image
-  image.src = data.background;
+document.getElementById('addPageButton').onclick = addPage;
+document.getElementById('renamePageButton').onclick = renamePage;
+document.getElementById('deletePageButton').onclick = deletePage;
+document.getElementById('pageSelector').onchange = (e) => {
+  saveCurrentPage();
+  loadPage(e.target.value);
+};
 
-  // Load drawing
-  const img = new Image();
-  img.onload = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
-  };
-  img.src = data.drawing;
+document.getElementById('exportButton').onclick = exportToImage;
 
-  // Load text boxes
-  textLayer.innerHTML = '';
-  data.textBoxes.forEach(boxData => {
-    const box = document.createElement('div');
-    box.className = 'text-box';
-    box.contentEditable = true;
-    box.style.left = boxData.left;
-    box.style.top = boxData.top;
-    box.innerText = boxData.text;
-    box.addEventListener('mousedown', dragMouseDown);
-    textLayer.appendChild(box);
-  });
-}
+// ======= INITIAL SETUP =======
 
-function autoSave() {
-  const textBoxesHTML = textLayer.innerHTML;
-  const drawingData = canvas.toDataURL();
-  const backgroundImage = image.src;
-
-  const saveData = {
-    drawingData,
-    textBoxesHTML,
-    backgroundImage
-  };
-
-  localStorage.setItem('plannerAutoSave', JSON.stringify(saveData));
-}
-
-window.addEventListener('load', () => {
-  const saved = localStorage.getItem('plannerAutoSave');
-  if (!saved) return;
-
-  const data = JSON.parse(saved);
-
-  // Restore image background
-  image.src = data.backgroundImage;
-
-  // Restore drawing layer
-  const img = new Image();
-  img.onload = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
-  };
-  img.src = data.drawingData;
-
-  // Restore text layer
-  textLayer.innerHTML = data.textBoxesHTML;
-  rebindTextBoxes();
-});
-
-function clearAll() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  textLayer.innerHTML = '';
-  localStorage.removeItem('plannerAutoSave');
-  history = [];
-  redoStack = [];
-  textHistory = [];
-  textRedoStack = [];
-}
-
+resizeCanvas();

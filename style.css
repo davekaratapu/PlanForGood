@@ -1,121 +1,60 @@
-/* General styles */
-body {
-  margin: 0;
-  font-family: sans-serif;
-  background: #f9f9f9;
-}
-
-/* Toolbar at the top */
-.toolbar {
-  background: #eee;
-  padding: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-}
-
-.toolbar label {
-  margin-left: 10px;
-}
-
-.toolbar input[type="color"],
-.toolbar select {
-  margin-left: 5px;
-  padding: 2px;
-}
-
-/* Planner container holds everything */
 #planner-container {
   position: relative;
-  width: 100%;
-  max-width: 800px;
-  margin: 20px auto;
+  width: 800px;  /* adjust as needed */
+  height: 1000px; /* adjust as needed */
   border: 1px solid #ccc;
-  touch-action: none; /* Important: allows drawing with touch */
+  margin: 20px auto;
+  user-select: none;
 }
 
-/* Background image (a page) */
 #planner-bg {
   width: 100%;
+  height: 100%;
   display: block;
-  user-select: none;
-  pointer-events: none; /* Let canvas receive events instead */
 }
 
-/* Drawing canvas (goes over the background) */
 #draw-canvas {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 10;
+  cursor: crosshair;
   width: 100%;
   height: 100%;
-  touch-action: none; /* allow stylus/touch drawing */
 }
 
-/* Text layer (goes above canvas) */
 #text-layer {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 20;
   width: 100%;
   height: 100%;
-  pointer-events: none; /* disable default interaction */
+  pointer-events: none; /* Let text boxes get pointer events */
 }
 
-/* Individual text boxes */
 .text-box {
   position: absolute;
+  min-width: 100px;
+  min-height: 30px;
   background: rgba(255, 255, 255, 0.7);
-  border: 1px dashed #666;
-  padding: 4px 24px 4px 4px; /* room for close button */
-  min-width: 50px;
-  min-height: 20px;
+  border: 1px solid #888;
+  padding: 5px;
+  box-sizing: border-box;
   resize: both;
   overflow: auto;
-  pointer-events: auto; /* enable interaction */
-  touch-action: none; /* enable dragging */
+  pointer-events: auto;
   cursor: move;
+  font-family: sans-serif;
+  font-size: 14px;
 }
 
-/* Close ("X") button on text box */
-.text-box .close-btn {
+.close-btn {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  background: #ff4d4d;
-  color: white;
+  top: 0;
+  right: 0;
+  background: transparent;
   border: none;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 12px;
-  line-height: 16px;
-  text-align: center;
+  font-size: 18px;
   cursor: pointer;
-  z-index: 5;
-  display: none;
-}
-
-canvas {
-  touch-action: none;
-}
-
-/* Show close button on hover */
-.text-box:hover .close-btn {
-  display: block;
-}
-
-/* Responsive handling */
-@media (max-width: 768px) {
-  .toolbar {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .text-box {
-    font-size: 14px;
-  }
+  color: red;
+  user-select: none;
 }
