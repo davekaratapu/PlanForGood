@@ -1,67 +1,33 @@
-/* --- Container & Layout --- */
-#planner-container {
-  position: relative;
-  width: 90vw;
-  max-width: 800px;
-  aspect-ratio: 4 / 5;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  margin: 20px auto;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  background-color: #fff;
-  user-select: none;
-  touch-action: none;
-  overflow: hidden;
-}
-
-/* Background Image */
-#planner-bg {
-  width: 100%;
+/* --- Layout Reset --- */
+html, body {
+  margin: 0;
+  padding: 0;
   height: 100%;
-  display: block;
-  object-fit: contain;
-  border-radius: 12px 12px 0 0;
-}
-
-/* Canvas */
-#draw-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 100%;
-  cursor: crosshair;
-  touch-action: none;
-  border-radius: 12px 12px 0 0;
-}
-
-/* Text Layer */
-#text-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  border-radius: 12px 12px 0 0;
+  overflow: auto; /* ✅ allow dropdowns to render outside */
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #ffffff;
 }
 
 /* --- Toolbar --- */
 .toolbar {
-  max-width: 800px;
-  margin: 0 auto 20px auto;
-  padding: 12px 16px;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  padding: 12px 16px;
   background-color: #f9f9f9;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  user-select: none;
+  border-bottom: 1px solid #ddd;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: visible; /* ✅ ensure dropdowns aren't clipped */
+  justify-content: flex-start;
+  position: relative;  /* ✅ enable absolute positioning for dropdowns */
+  z-index: 1000;
 }
 
-/* Buttons */
+/* Toolbar Buttons */
 .toolbar button {
   background: #007BFF;
   border: none;
@@ -86,14 +52,12 @@
   background: #00408d;
 }
 
-/* Disabled button style */
 .toolbar button:disabled {
   background: #cccccc;
   cursor: not-allowed;
   color: #666666;
 }
 
-/* Select and Input Color */
 .toolbar select,
 .toolbar input[type="color"] {
   padding: 10px 12px;
@@ -104,6 +68,8 @@
   cursor: pointer;
   transition: border-color 0.2s ease;
   user-select: none;
+  position: relative;
+  z-index: 2000; /* ✅ make dropdowns pop over everything */
 }
 
 .toolbar select:focus,
@@ -112,9 +78,99 @@
   outline: none;
 }
 
-/* Page Selector */
 #pageSelector {
   min-width: 120px;
+}
+
+/* --- Dropdowns --- */
+.dropdown {
+  position: relative;
+}
+
+.dropbtn {
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: bold;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 220px;
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 3000; /* ✅ ensure dropdown overlays all */
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.dropdown-content button,
+.dropdown-content label,
+.dropdown-content select,
+.dropdown-content input {
+  display: block;
+  width: 100%;
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+/* --- Planner Container --- */
+#planner-container {
+  position: relative;
+  width: 100vw;
+  height: calc(100vh - 80px); /* Toolbar height approx. */
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+  margin: 0 auto;
+  background-color: #fff;
+  touch-action: none;
+  z-index: 1;
+}
+
+/* Background Image */
+#planner-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 0;
+  pointer-events: none; /* ✅ allow clicks to canvas */
+}
+
+/* Drawing Canvas */
+#draw-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  cursor: crosshair;
+  touch-action: none;
+  pointer-events: auto; /* ✅ ensure canvas can capture input */
+}
+
+/* Text Layer */
+#text-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* ✅ does not block canvas */
+  z-index: 2;
 }
 
 /* --- Text Boxes --- */
@@ -131,12 +187,11 @@
   overflow: auto;
   pointer-events: auto;
   cursor: move;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 16px;
   color: #333;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   user-select: text;
-  transition: box-shadow 0.2s ease;
+  z-index: 3;
 }
 
 .text-box:focus {
@@ -145,7 +200,7 @@
   box-shadow: 0 0 8px rgba(0,123,255,0.6);
 }
 
-/* Close Button */
+/* Close Button inside Text Box */
 .close-btn {
   position: absolute;
   top: 4px;
@@ -156,44 +211,55 @@
   cursor: pointer;
   color: #e55353;
   user-select: none;
-  transition: color 0.2s ease;
   line-height: 1;
+  z-index: 4;
 }
 
 .close-btn:hover {
   color: #b32a2a;
 }
 
-/* --- Responsive tweaks --- */
-@media (max-width: 600px) {
+/* --- Responsive Tweaks --- */
+@media (max-width: 768px) {
   .toolbar {
     justify-content: center;
+    gap: 8px;
   }
 
   .toolbar button,
   .toolbar select,
   .toolbar input[type="color"] {
     flex: 1 1 45%;
-    min-width: 140px;
+    min-width: 120px;
+  }
+
+  #planner-container {
+    height: calc(100vh - 100px);
   }
 }
 
-@media (max-width: 400px) {
-  #planner-container {
-    width: 100vw;
-    aspect-ratio: 3 / 4;
-  }
-
-  .text-box {
-    min-width: 100px;
-    font-size: 14px;
-    padding: 8px 10px 6px 10px;
+@media (max-width: 480px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px;
   }
 
   .toolbar button,
   .toolbar select,
   .toolbar input[type="color"] {
-    min-width: 100%;
-    flex: none;
+    width: 100%;
+    min-width: unset;
+  }
+
+  #planner-container {
+    width: 100vw;
+    height: calc(100vh - 120px);
+  }
+
+  .text-box {
+    font-size: 14px;
+    padding: 8px 10px;
   }
 }

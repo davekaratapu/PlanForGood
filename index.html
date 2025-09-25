@@ -10,40 +10,66 @@
 
   <!-- Toolbar -->
   <div class="toolbar">
-    <button onclick="saveAsImage()">📸 Save as Image</button>
-    <button onclick="addTextBox()">➕ Add Text</button>
-    <button onclick="clearCanvas()">🧹 Clear Drawing</button>
-    <button onclick="undo()">↩️ Undo</button>
-    <button onclick="redo()">↪️ Redo</button>
-    
-    <select id="pageSelector" onchange="switchPage(this.value)">
-      <option value="page1.jpg">Page 1</option>
-      <option value="page2.jpg">Page 2</option>
-    </select>
-    
-    <button onclick="addPage()">➕ Add Page</button>
-    <button onclick="renamePage()">✏️ Rename</button>
-    <button onclick="deletePage()">🗑️ Delete</button>
 
-    <button onclick="undoText()">📝 Undo Text</button>
-    <button onclick="redoText()">📝 Redo Text</button>
-    <button onclick="clearAll()">🧹 Clear All</button>
+    <!-- Drawing Tools -->
+    <div class="dropdown">
+      <button class="dropbtn">🎨 Drawing</button>
+      <div class="dropdown-content">
+        <label>Pen Color:
+          <input type="color" id="penColor" value="#000000" />
+        </label>
+        <label>Pen Size: 
+          <select id="penSize">
+            <option value="2">Thin</option>
+            <option value="5" selected>Medium</option>
+            <option value="10">Thick</option>
+          </select>
+        </label>
+        <button onclick="toggleEraser()" id="eraserButton">🧽 Eraser: Off</button>
+        <button onclick="clearCanvas()">🧹 Clear Drawing</button>
+        <button onclick="undo()">↩️ Undo</button>
+        <button onclick="redo()">↪️ Redo</button>
+      </div>
+    </div>
 
-    <label for="penColor">Pen Color:</label>
-    <input type="color" id="penColor" value="#000000" />
+    <!-- Text Tools -->
+    <div class="dropdown">
+      <button class="dropbtn">📝 Text</button>
+      <div class="dropdown-content">
+        <button onclick="addTextBox()">➕ Add Text</button>
+        <button onclick="undoText()">↩️ Undo Text</button>
+        <button onclick="redoText()">↪️ Redo Text</button>
+      </div>
+    </div>
 
-    <label for="penSize">Pen Size:</label>
-    <select id="penSize">
-      <option value="2">Thin</option>
-      <option value="5" selected>Medium</option>
-      <option value="10">Thick</option>
-    </select>
+    <!-- Page Management -->
+    <div class="dropdown">
+      <button class="dropbtn">📄 Pages</button>
+      <div class="dropdown-content">
+        <label>Switch Page:
+          <select id="pageSelector" onchange="switchPage(this.value)">
+            <option value="page1.jpg">Page 1</option>
+            <option value="page2.jpg">Page 2</option>
+          </select>
+        </label>
+        <button onclick="addPage()">➕ Add Page</button>
+        <button onclick="renamePage()">✏️ Rename</button>
+        <button onclick="deletePage()">🗑️ Delete</button>
+        <button onclick="savePage()">💾 Save Page</button>
+        <button onclick="loadPageFromFile()">📂 Load Page</button>
+        <input type="file" id="fileInput" style="display:none" accept=".json" />
+      </div>
+    </div>
 
-    <button onclick="toggleEraser()" id="eraserButton">🧽 Eraser: Off</button>
+    <!-- Export -->
+    <div class="dropdown">
+      <button class="dropbtn">📸 Export</button>
+      <div class="dropdown-content">
+        <button onclick="saveAsImage()">📸 Save as Image</button>
+        <button onclick="clearAll()">🧹 Clear All</button>
+      </div>
+    </div>
 
-    <button onclick="savePage()">💾 Save Page</button>
-    <button onclick="loadPageFromFile()">📂 Load Page</button>
-    <input type="file" id="fileInput" style="display:none" accept=".json" />
   </div>
 
   <!-- Planner Page + Drawing Canvas + Text -->
@@ -53,6 +79,7 @@
     <div id="text-layer"></div>
   </div>
 
+  <!-- Scripts -->
   <script src="script.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 

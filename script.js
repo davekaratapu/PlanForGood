@@ -15,10 +15,9 @@ let isEraser = false;
 let textHistory = [];
 let textRedoStack = [];
 
-let pages = []; // Array of page objects
-let currentPageIndex = -1; // -1 means no page yet
+let pages = [];
+let currentPageIndex = -1;
 
-// Drawing flag
 let drawing = false;
 
 // ======= PAGE MANAGEMENT =======
@@ -32,7 +31,7 @@ function addPage() {
   const newPage = {
     name,
     background: image.src,
-    drawing: "", // empty canvas
+    drawing: "",
     textBoxesHTML: ""
   };
 
@@ -91,18 +90,25 @@ function loadPage(index) {
   currentPageIndex = parseInt(index);
   const page = pages[currentPageIndex];
 
-  if (!page) return;
+  if (!page) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    textLayer.innerHTML = "";
+    return;
+  }
 
   image.src = page.background;
 
-  const img = new Image();
-  img.onload = () => {
+  image.onload = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (page.drawing) {
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      img.src = page.drawing;
     }
   };
-  img.src = page.drawing || "";
 
   textLayer.innerHTML = page.textBoxesHTML || "";
   rebindTextBoxes();
@@ -119,14 +125,15 @@ function autoSaveProject() {
   localStorage.setItem('plannerProject', JSON.stringify(saveData));
 }
 
-// Load saved project on window load
 window.addEventListener('load', () => {
+  resizeCanvas();
+
   const saved = localStorage.getItem('plannerProject');
   if (!saved) return;
 
   const project = JSON.parse(saved);
   pages = project.pages || [];
-  currentPageIndex = project.currentPageIndex || 0;
+  currentPageIndex = project.currentPageIndex >= 0 ? project.currentPageIndex : 0;
 
   updatePageSelector();
   if (pages.length > 0) loadPage(currentPageIndex);
@@ -135,9 +142,11 @@ window.addEventListener('load', () => {
 // ======= CANVAS RESIZE =======
 
 function resizeCanvas() {
-  const rect = image.getBoundingClientRect();
-
+  const rect = container.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
+
+  // Save current canvas content
+  const oldImage = canvas.toDataURL();
 
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
@@ -149,10 +158,19 @@ function resizeCanvas() {
 
   textLayer.style.width = rect.width + 'px';
   textLayer.style.height = rect.height + 'px';
+
+  if (oldImage) {
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = oldImage;
+  }
 }
 
 window.addEventListener('resize', resizeCanvas);
-image.onload = resizeCanvas;
+image.addEventListener('load', resizeCanvas);
 
 // ======= DRAWING HANDLERS =======
 
@@ -186,66 +204,17 @@ canvas.addEventListener('pointerleave', () => {
   drawing = false;
 });
 
-// Support for mouse events (for compatibility)
-canvas.addEventListener('mousedown', e => {
-  drawing = true;
-  ctx.beginPath();
-  ctx.moveTo(e.offsetX, e.offsetY);
-});
-
-canvas.addEventListener('mousemove', e => {
-  if (!drawing) return;
-  ctx.strokeStyle = isEraser ? '#FFFFFF' : penColor;
-  ctx.lineWidth = penSize;
-  ctx.lineCap = 'round';
-  ctx.lineTo(e.offsetX, e.offsetY);
-  ctx.stroke();
-});
-
-canvas.addEventListener('mouseup', e => {
-  if (drawing) {
-    drawing = false;
-    saveState();
-  }
-});
-
-// Touch drawing support
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
-  if (e.touches.length > 0) {
-    drawing = true;
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0];
-    ctx.beginPath();
-    ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
-  }
-}, { passive: false });
-
-canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  if (!drawing) return;
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  ctx.strokeStyle = isEraser ? '#FFFFFF' : penColor;
-  ctx.lineWidth = penSize;
-  ctx.lineCap = 'round';
-  ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
-  ctx.stroke();
-}, { passive: false });
-
-canvas.addEventListener('touchend', e => {
-  e.preventDefault();
-  drawing = false;
-  saveState();
-}, { passive: false });
+// Remove redundant mouse/touch handlers to avoid conflicts
+// Pointer events cover mouse + touch properly
 
 // ======= HISTORY MANAGEMENT =======
 
 function saveState() {
-  if (history.length > 50) history.shift();
+  // Limit history length and save current canvas state
+  if (history.length >= 50) history.shift();
   history.push(canvas.toDataURL());
   redoStack = [];
-  autoSave();
+  autoSaveProject();
 }
 
 function undo() {
@@ -280,6 +249,7 @@ function addTextBox() {
   box.style.position = 'absolute';
   box.style.left = '50px';
   box.style.top = '50px';
+  box.style.zIndex = 10; // Make sure text box is above canvas
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
@@ -300,11 +270,10 @@ function addTextBox() {
 }
 
 function saveTextState() {
-  const snapshot = textLayer.innerHTML;
-  textHistory.push(snapshot);
-  if (textHistory.length > 50) textHistory.shift();
+  if (textHistory.length >= 50) textHistory.shift();
+  textHistory.push(textLayer.innerHTML);
   textRedoStack = [];
-  autoSave();
+  autoSaveProject();
 }
 
 function undoText() {
@@ -326,7 +295,9 @@ function redoText() {
 function rebindTextBoxes() {
   textLayer.querySelectorAll('.text-box').forEach(box => {
     box.contentEditable = true;
+    box.removeEventListener('mousedown', dragMouseDown);
     box.addEventListener('mousedown', dragMouseDown);
+    box.removeEventListener('input', saveTextState);
     box.addEventListener('input', saveTextState);
 
     if (!box.querySelector('.close-btn')) {
@@ -358,7 +329,7 @@ function dragMouseDown(e) {
     let newLeft = pageX - shiftX - containerRect.left;
     let newTop = pageY - shiftY - containerRect.top;
 
-    // Optional: constrain within container boundaries
+    // Constrain within container boundaries
     newLeft = Math.max(0, Math.min(newLeft, container.clientWidth - box.offsetWidth));
     newTop = Math.max(0, Math.min(newTop, container.clientHeight - box.offsetHeight));
 
@@ -411,32 +382,39 @@ function clearText() {
 
 // ======= EXPORT =======
 
+// Make sure html2canvas is loaded for this function to work
 function exportToImage() {
-  // Save current state
   saveCurrentPage();
 
-  // Create temporary canvas to merge canvas + text layer
   const exportCanvas = document.createElement('canvas');
   exportCanvas.width = canvas.width;
   exportCanvas.height = canvas.height;
   const exportCtx = exportCanvas.getContext('2d');
 
-  // Draw background image
   const bgImg = new Image();
+  bgImg.crossOrigin = "anonymous"; // For CORS issues with image if needed
   bgImg.src = image.src;
 
   bgImg.onload = () => {
     exportCtx.drawImage(bgImg, 0, 0, exportCanvas.width, exportCanvas.height);
     exportCtx.drawImage(canvas, 0, 0);
 
-    // Draw text layer (convert divs to image)
-    html2canvas(textLayer, { backgroundColor: null }).then(textCanvas => {
-      exportCtx.drawImage(textCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
-      const link = document.createElement('a');
-      link.download = 'planner_export.png';
-      link.href = exportCanvas.toDataURL();
-      link.click();
-    });
+    // Use html2canvas to convert textLayer divs to canvas image
+    if (typeof html2canvas !== 'undefined') {
+      html2canvas(textLayer, {
+        backgroundColor: null,
+        useCORS: true,
+        scale: 2
+      }).then(textCanvas => {
+        exportCtx.drawImage(textCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
+        const link = document.createElement('a');
+        link.download = 'planner_export.png';
+        link.href = exportCanvas.toDataURL();
+        link.click();
+      });
+    } else {
+      alert("html2canvas library is required for export.");
+    }
   };
 }
 
