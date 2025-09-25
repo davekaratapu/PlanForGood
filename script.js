@@ -161,11 +161,24 @@ function toggleEraser() {
 
 // Resize canvas to match image
 function resizeCanvas() {
-  canvas.width = image.clientWidth;
-  canvas.height = image.clientHeight;
-  textLayer.style.width = canvas.width + 'px';
-  textLayer.style.height = canvas.height + 'px';
+  const rect = image.getBoundingClientRect();
+
+  // Get device pixel ratio for crisp drawing on retina
+  const dpr = window.devicePixelRatio || 1;
+
+  // Set canvas size based on real pixels
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+  ctx.scale(dpr, dpr);
+
+  textLayer.style.width = rect.width + 'px';
+  textLayer.style.height = rect.height + 'px';
 }
+
 
 window.addEventListener('resize', resizeCanvas);
 image.onload = resizeCanvas;
@@ -346,6 +359,41 @@ function dragMouseDown(e) {
     saveTextState(); // <--- Save move
   };
 }
+
+// Touch/stylus drawing
+canvas.addEventListener('touchstart', function (e) {
+  e.preventDefault();
+  if (e.touches.length > 0) {
+    drawing = true;
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function (e) {
+  e.preventDefault();
+  if (drawing && e.touches.length > 0) {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    ctx.strokeStyle = isEraser ? '#FFFFFF' : penColor;
+    ctx.lineWidth = penSize;
+    ctx.lineCap = 'round';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', function (e) {
+  e.preventDefault();
+  drawing = false;
+  saveState();
+}, { passive: false });
 
 
 // Clear canvas
